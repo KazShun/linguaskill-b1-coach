@@ -125,9 +125,25 @@
             </div>
             <h2 class="text-2xl font-bold mb-2">測驗完成！</h2>
             <p id="result-desc" class="text-gray-600 mb-6 leading-relaxed">計算成績中...</p>
-            <button onclick="restartQuiz()" class="w-full bg-gray-800 text-white font-semibold py-3 rounded-xl active-scale shadow-md hover:bg-gray-700">
-                <i class="fa-solid fa-rotate-right mr-1"></i> 重新隨機測驗
-            </button>
+            
+            <!-- 新增錯題清單容器 (預設隱藏) -->
+            <div id="wrong-answers-container" class="hidden text-left mb-6">
+                <h3 class="font-bold text-lg mb-3 flex items-center gap-2 text-red-600">
+                    <i class="fa-solid fa-triangle-exclamation"></i> 錯題回顧
+                </h3>
+                <div id="wrong-answers-list" class="space-y-4">
+                    <!-- 錯題內容將由 JS 動態生成 -->
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="view-wrong-btn" onclick="toggleWrongAnswers()" class="hidden w-full bg-white text-gray-700 border-2 border-gray-200 font-semibold py-3 rounded-xl active-scale shadow-sm hover:border-gray-300">
+                    <i class="fa-solid fa-eye mr-1"></i> 檢視錯題解析
+                </button>
+                <button onclick="restartQuiz()" class="w-full bg-gray-800 text-white font-semibold py-3 rounded-xl active-scale shadow-md hover:bg-gray-700">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> 重新隨機測驗
+                </button>
+            </div>
         </div>
     </main>
 
@@ -307,6 +323,7 @@
         let currentQuestionIndex = 0;
         let score = 0;
         let hasAnswered = false;
+        let wrongAnswers = []; // 新增：用於記錄錯題的陣列
         const QUESTIONS_PER_QUIZ = 10; 
 
         const qNumEl = document.getElementById('q-num');
@@ -338,6 +355,7 @@
             
             currentQuestionIndex = 0;
             score = 0;
+            wrongAnswers = []; // 初始化測驗時清空錯題記錄
             updateScoreDisplay();
             
             questionCard.classList.remove('hidden');
@@ -386,6 +404,14 @@
                 btnElement.innerHTML += '<i class="fa-solid fa-circle-xmark float-right text-xl mt-0.5"></i>';
                 allBtns[currentQ.correct].classList.add('correct');
                 allBtns[currentQ.correct].classList.remove('border-gray-200');
+                
+                // 記錄錯題
+                wrongAnswers.push({
+                    question: currentQ.question,
+                    userAnswer: currentQ.options[selectedIndex],
+                    correctAnswer: currentQ.options[currentQ.correct],
+                    explanation: currentQ.explanation
+                });
             }
 
             Array.from(allBtns).forEach(b => {
@@ -441,6 +467,15 @@
             const finalPercentage = Math.round((score / currentQuizData.length) * 100);
             const resultDesc = document.getElementById('result-desc');
             const resultIcon = document.getElementById('result-icon');
+            const viewWrongBtn = document.getElementById('view-wrong-btn');
+            const wrongContainer = document.getElementById('wrong-answers-container');
+            const wrongList = document.getElementById('wrong-answers-list');
+            
+            // 隱藏/清空錯題區塊狀態
+            wrongContainer.classList.add('hidden');
+            wrongList.innerHTML = '';
+            viewWrongBtn.classList.add('hidden');
+            viewWrongBtn.innerHTML = '<i class="fa-solid fa-eye mr-1"></i> 檢視錯題解析';
             
             if (finalPercentage >= 80) {
                 resultIcon.className = "inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-500 mb-4";
@@ -454,6 +489,47 @@
                 resultIcon.className = "inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4";
                 resultIcon.innerHTML = '<i class="fa-solid fa-dumbbell text-3xl"></i>';
                 resultDesc.innerHTML = `繼續加油！本次答對率 <strong>${finalPercentage}%</strong><br>請務必詳讀每一題的解析與學習指南。`;
+            }
+
+            // 如果有錯題，顯示「檢視錯題」按鈕並生成錯題清單
+            if (wrongAnswers.length > 0) {
+                viewWrongBtn.classList.remove('hidden');
+                
+                wrongAnswers.forEach((wrong, index) => {
+                    const formattedQuestion = wrong.question.replace('_____', `<span class="inline-block font-bold text-blue-600 px-1 border-b-2 border-blue-600 mx-1">${wrong.correctAnswer}</span>`);
+                    let formattedExplanation = wrong.explanation.replace(/【(.*?)】/g, '<strong class="text-blue-700 bg-blue-100 px-1 rounded mr-1">【$1】</strong> ');
+                    
+                    const item = document.createElement('div');
+                    item.className = "bg-red-50 p-4 rounded-xl border border-red-100";
+                    item.innerHTML = `
+                        <div class="text-xs font-bold text-red-600 uppercase tracking-wider mb-2">錯誤題型 ${index + 1}</div>
+                        <p class="text-sm text-gray-800 font-medium mb-3">${formattedQuestion}</p>
+                        <div class="flex flex-col gap-1 text-sm mb-3">
+                            <div class="text-red-500"><i class="fa-solid fa-xmark mr-1"></i> 你的答案：${wrong.userAnswer}</div>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-red-100 text-sm text-gray-600">
+                            ${formattedExplanation}
+                        </div>
+                    `;
+                    wrongList.appendChild(item);
+                });
+            }
+        }
+
+        function toggleWrongAnswers() {
+            const wrongContainer = document.getElementById('wrong-answers-container');
+            const viewWrongBtn = document.getElementById('view-wrong-btn');
+            
+            if (wrongContainer.classList.contains('hidden')) {
+                wrongContainer.classList.remove('hidden');
+                viewWrongBtn.innerHTML = '<i class="fa-solid fa-eye-slash mr-1"></i> 收起錯題解析';
+                // 滾動到錯題區塊
+                setTimeout(() => {
+                    wrongContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            } else {
+                wrongContainer.classList.add('hidden');
+                viewWrongBtn.innerHTML = '<i class="fa-solid fa-eye mr-1"></i> 檢視錯題解析';
             }
         }
 
