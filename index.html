@@ -12,29 +12,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
+        /* 移除強制隱藏滾動條的設定，讓版面更自然 */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Tailwind gray-100 */
-            /* 隱藏原生滾動條但保持可滾動 */
-            -ms-overflow-style: none;  
-            scrollbar-width: none;  
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent; /* 移除 iOS 點擊閃爍 */
         }
-        body::-webkit-scrollbar {
-            display: none;
-        }
-        /* 避免 iOS Safari 下方導覽列遮擋內容 (加入 env(safe-area-inset-bottom) 的保護) */
+        
+        /* 針對主內容區塊進行安全區域保護 */
         .content-area {
-            /* 預設給予足夠的 padding，並加入 Safari 的底部安全距離 */
-            padding-bottom: calc(100px + env(safe-area-inset-bottom)); 
+            /* 上方留給 header，下方留給 nav 加上安全距離與額外空間確保滑動到底 */
+            padding-bottom: calc(90px + env(safe-area-inset-bottom)); 
+            padding-top: 20px;
         }
+
         /* 點擊時的視覺回饋 */
         .active-scale:active {
             transform: scale(0.98);
         }
-        /* 隱藏未啟用的畫面 */
-        .view-hidden {
-            display: none;
-        }
+
         /* 選項按鈕過渡動畫 */
         .option-btn {
             transition: all 0.2s;
@@ -55,11 +51,24 @@
             border-color: #ef4444; 
             color: #b91c1c; 
         }
+
+        /* 確保底部導覽列永遠固定在最下方，並避開 iPhone 下方的橫槓 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-top: 1px solid #e5e7eb;
+            z-index: 50;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
     </style>
 </head>
-<body class="text-gray-800 h-screen w-full overflow-hidden flex flex-col relative selection:bg-blue-200">
+<!-- 移除 h-screen 與 overflow-hidden，改用 min-h-screen 讓內容自然延伸 -->
+<body class="text-gray-800 min-h-screen w-full flex flex-col relative selection:bg-blue-200">
 
-    <header class="bg-white shadow-sm px-4 py-4 sticky top-0 z-10 flex justify-between items-center">
+    <header class="bg-white shadow-sm px-4 py-4 sticky top-0 z-50 flex justify-between items-center">
         <div>
             <h1 class="font-bold text-lg text-blue-600">Linguaskill B1</h1>
             <p class="text-xs text-gray-500">百題特訓隨身教練</p>
@@ -70,7 +79,8 @@
         </div>
     </header>
 
-    <main id="view-quiz" class="flex-1 overflow-y-auto content-area px-4 py-6">
+    <!-- 主內容區：移除 flex-1 與 overflow-y-auto，讓 body 自己管滾動 -->
+    <main id="view-quiz" class="content-area px-4">
         
         <!-- 測驗進度條 -->
         <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
@@ -121,7 +131,8 @@
         </div>
     </main>
 
-    <main id="view-guide" class="flex-1 overflow-y-auto content-area px-4 py-6 view-hidden">
+    <!-- 學習指南區 -->
+    <main id="view-guide" class="content-area px-4 hidden">
         <h2 class="text-2xl font-bold mb-6 text-gray-800">B1 專屬學習指南</h2>
         
         <div class="bg-white rounded-2xl shadow-sm border-l-4 border-l-blue-500 p-5 mb-4">
@@ -160,14 +171,14 @@
         </div>
     </main>
 
-    <!-- 底部導覽列：加入 pb-safe (Tailwind 自訂類別的替代方案) 與 env() 設定 -->
-    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-20" style="padding-bottom: env(safe-area-inset-bottom);">
+    <!-- 底部導覽列：套用新的 .bottom-nav 樣式 -->
+    <nav class="bottom-nav">
         <div class="flex justify-around items-center h-16 px-2">
-            <button id="nav-quiz" onclick="switchTab('quiz')" class="flex flex-col items-center justify-center w-full h-full text-blue-600 transition-colors">
+            <button id="nav-quiz" onclick="switchTab('quiz')" class="flex flex-col items-center justify-center w-full h-full text-blue-600 transition-colors pt-2">
                 <i class="fa-solid fa-pen-to-square text-xl mb-1"></i>
                 <span class="text-[10px] font-semibold">測驗練習</span>
             </button>
-            <button id="nav-guide" onclick="switchTab('guide')" class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
+            <button id="nav-guide" onclick="switchTab('guide')" class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors pt-2">
                 <i class="fa-solid fa-book-open text-xl mb-1"></i>
                 <span class="text-[10px] font-semibold">學習指南</span>
             </button>
@@ -396,8 +407,9 @@
             explanationTextEl.innerHTML = formattedExplanation;
             explanationContainer.classList.remove('hidden');
             
+            // 修正滾動邏輯：讓畫面平滑滾動到「下一題」按鈕的位置
             setTimeout(() => {
-                document.getElementById('view-quiz').scrollTop = document.getElementById('view-quiz').scrollHeight;
+                nextBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
             
             if (currentQuestionIndex === currentQuizData.length - 1) {
@@ -411,7 +423,8 @@
             currentQuestionIndex++;
             if (currentQuestionIndex < currentQuizData.length) {
                 loadQuestion();
-                document.getElementById('view-quiz').scrollTop = 0;
+                // 切換題目後，滾動回頂部
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 showResults();
             }
@@ -422,6 +435,9 @@
             quizResult.classList.remove('hidden');
             progressBar.style.width = '100%';
             
+            // 確保結果畫面時滾動到最上方
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
             const finalPercentage = Math.round((score / currentQuizData.length) * 100);
             const resultDesc = document.getElementById('result-desc');
             const resultIcon = document.getElementById('result-icon');
@@ -462,16 +478,16 @@
             const navGuide = document.getElementById('nav-guide');
 
             if (tab === 'quiz') {
-                viewQuiz.classList.remove('view-hidden');
-                viewGuide.classList.add('view-hidden');
+                viewQuiz.classList.remove('hidden');
+                viewGuide.classList.add('hidden');
                 
                 navQuiz.classList.remove('text-gray-400', 'hover:text-gray-600');
                 navQuiz.classList.add('text-blue-600');
                 navGuide.classList.remove('text-blue-600');
                 navGuide.classList.add('text-gray-400', 'hover:text-gray-600');
             } else if (tab === 'guide') {
-                viewGuide.classList.remove('view-hidden');
-                viewQuiz.classList.add('view-hidden');
+                viewGuide.classList.remove('hidden');
+                viewQuiz.classList.add('hidden');
                 
                 navGuide.classList.remove('text-gray-400', 'hover:text-gray-600');
                 navGuide.classList.add('text-blue-600');
