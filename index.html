@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Linguaskill B1 隨身教練</title>
+    <!-- 導入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 導入 FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 導入 Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+            /* 隱藏原生滾動條但保持可滾動 */
+            -ms-overflow-style: none;  
+            scrollbar-width: none;  
+        }
+        body::-webkit-scrollbar {
+            display: none;
+        }
+        /* 避免 iOS Safari 下方導覽列遮擋內容 */
+        .content-area {
+            padding-bottom: 80px; 
+        }
+        /* 點擊時的視覺回饋 */
+        .active-scale:active {
+            transform: scale(0.98);
+        }
+        /* 隱藏未啟用的畫面 */
+        .view-hidden {
+            display: none;
+        }
+        /* 選項按鈕過渡動畫 */
+        .option-btn {
+            transition: all 0.2s;
+        }
+        /* STREAMING_CHUNK:Defining specific states for quiz options... -->
+        .option-btn.selected {
+            background-color: #eff6ff; 
+            border-color: #3b82f6; 
+            color: #1d4ed8; 
+        }
+        .option-btn.correct {
+            background-color: #f0fdf4; 
+            border-color: #22c55e; 
+            color: #15803d; 
+        }
+        .option-btn.incorrect {
+            background-color: #fef2f2; 
+            border-color: #ef4444; 
+            color: #b91c1c; 
+        }
+    </style>
+</head>
+<body class="text-gray-800 h-screen w-full overflow-hidden flex flex-col relative selection:bg-blue-200">
+
+    <header class="bg-white shadow-sm px-4 py-4 sticky top-0 z-10 flex justify-between items-center">
+        <div>
+            <h1 class="font-bold text-lg text-blue-600">Linguaskill B1</h1>
+            <p class="text-xs text-gray-500">百題特訓隨身教練</p>
+        </div>
+        <div class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1 shadow-sm">
+            <i class="fa-solid fa-trophy text-yellow-500"></i>
+            <span id="score-display">0%</span>
+        </div>
+    </header>
+
+    <main id="view-quiz" class="flex-1 overflow-y-auto content-area px-4 py-6">
+        
+        <!-- 測驗進度條 -->
+        <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-500">測驗進度 (隨機 10 題)</span>
+                <span class="text-sm font-bold text-blue-600" id="progress-text">1 / 10</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 10%"></div>
+            </div>
+        </div>
+
+        <div id="question-card" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+            <div class="bg-blue-50 px-5 py-3 border-b border-blue-100">
+                <span class="text-xs font-bold text-blue-800 uppercase tracking-wider">Question <span id="q-num">1</span></span>
+            </div>
+            <div class="p-5">
+                <p class="text-sm text-gray-500 mb-3">請選出最適合填入空格的單字：</p>
+                <p id="question-text" class="text-lg font-medium leading-relaxed mb-6">
+                    <!-- 題目內容由 JS 插入 -->
+                </p>
+                
+                <div id="options-container" class="flex flex-col gap-3">
+                    <!-- 選項由 JS 動態生成 -->
+                </div>
+            </div>
+            
+            <div id="explanation-container" class="hidden bg-gray-50 p-5 border-t border-gray-100">
+                <h4 class="font-bold text-sm text-gray-700 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb text-yellow-500"></i> 解析
+                </h4>
+                <p id="explanation-text" class="text-sm text-gray-600 leading-relaxed"></p>
+                <button id="next-btn" class="mt-4 w-full bg-blue-600 text-white font-semibold py-3 rounded-xl active-scale shadow-md transition-colors hover:bg-blue-700">
+                    下一題 <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="quiz-result" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center mt-4">
+            <div id="result-icon" class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-500 mb-4">
+                <i class="fa-solid fa-check-double text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-2">測驗完成！</h2>
+            <p id="result-desc" class="text-gray-600 mb-6 leading-relaxed">計算成績中...</p>
+            <button onclick="restartQuiz()" class="w-full bg-gray-800 text-white font-semibold py-3 rounded-xl active-scale shadow-md hover:bg-gray-700">
+                <i class="fa-solid fa-rotate-right mr-1"></i> 重新隨機測驗
+            </button>
+        </div>
+    </main>
+
+    <main id="view-guide" class="flex-1 overflow-y-auto content-area px-4 py-6 view-hidden">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">B1 專屬學習指南</h2>
+        
+        <div class="bg-white rounded-2xl shadow-sm border-l-4 border-l-blue-500 p-5 mb-4">
+            <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-link text-blue-500"></i> 常考搭配詞 (Collocations)
+            </h3>
+            <ul class="text-sm space-y-2 text-gray-600">
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>take responsibility:</strong> 承擔責任</li>
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>make an appointment:</strong> 預約</li>
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>do business:</strong> 做生意</li>
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>pay attention to:</strong> 注意</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border-l-4 border-l-purple-500 p-5 mb-4">
+            <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+                <i class="fa-regular fa-clock text-purple-500"></i> 時間與期限介係詞
+            </h3>
+            <ul class="text-sm space-y-2 text-gray-600">
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>on Friday:</strong> 特定日期用 on</li>
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>by 5 PM:</strong> 在...期限之前，用 by</li>
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>until Friday:</strong> 直到...為止，動作持續</li>
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>in advance:</strong> 提前、事先</li>
+            </ul>
+        </div>
+        
+        <div class="bg-white rounded-2xl shadow-sm border-l-4 border-l-orange-500 p-5 mb-4">
+            <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-code-branch text-orange-500"></i> 轉折詞與不可數名詞
+            </h3>
+            <ul class="text-sm space-y-2 text-gray-600">
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>Despite + 名詞:</strong> 儘管 (不能接完整子句)</li>
+                <li><i class="fa-solid fa-check text-green-500 mr-1"></i><strong>Unless:</strong> 除非 (通常搭配未來式)</li>
+                <li><i class="fa-solid fa-triangle-exclamation text-yellow-500 mr-1"></i><strong>advice / information / furniture:</strong> 絕對不可數，不能加 s。</li>
+            </ul>
+        </div>
+    </main>
+
+    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-20 pb-safe">
+        <div class="flex justify-around items-center h-16 px-2" style="padding-bottom: env(safe-area-inset-bottom);">
+            <button id="nav-quiz" onclick="switchTab('quiz')" class="flex flex-col items-center justify-center w-full h-full text-blue-600 transition-colors">
+                <i class="fa-solid fa-pen-to-square text-xl mb-1"></i>
+                <span class="text-[10px] font-semibold">測驗練習</span>
+            </button>
+            <button id="nav-guide" onclick="switchTab('guide')" class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-book-open text-xl mb-1"></i>
+                <span class="text-[10px] font-semibold">學習指南</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        // --- 完整 100 題 Linguaskill B1 題庫 ---
+        const masterQuizData = [
+            // 搭配詞 (Collocations) - 1~15
+            { question: "We are looking for someone who can _____ responsibility for managing the new marketing project.", options: ["make", "do", "take", "have"], correct: 2, explanation: "【搭配詞】「承擔責任」固定搭配為 take responsibility。" },
+            { question: "If you want to see the doctor today, you need to _____ an appointment by calling the clinic first.", options: ["make", "do", "take", "have"], correct: 0, explanation: "【搭配詞】「預約」固定搭配為 make an appointment。" },
+            { question: "Our company has been _____ business with them for over ten years.", options: ["making", "doing", "taking", "having"], correct: 1, explanation: "【搭配詞】「做生意」固定搭配為 do business。" },
+            { question: "It is important to _____ attention to the safety instructions before operating the machine.", options: ["make", "take", "pay", "give"], correct: 2, explanation: "【搭配詞】「注意」固定搭配為 pay attention to。" },
+            { question: "All employees are encouraged to _____ part in the upcoming charity run.", options: ["make", "have", "play", "take"], correct: 3, explanation: "【搭配詞】「參加」固定搭配為 take part in。" },
+            { question: "Can you _____ me a favor and print these documents for the meeting?", options: ["make", "do", "give", "bring"], correct: 1, explanation: "【搭配詞】「幫個忙」固定搭配為 do someone a favor。" },
+            { question: "The committee will _____ a final decision on the budget by tomorrow morning.", options: ["take", "make", "do", "get"], correct: 1, explanation: "【搭配詞】「做決定」固定搭配為 make a decision。" },
+            { question: "Please don't _____ a noise while the presentation is going on.", options: ["do", "create", "make", "have"], correct: 2, explanation: "【搭配詞】「製造噪音」固定搭配為 make a noise。" },
+            { question: "I usually _____ a quick shower before I leave for work.", options: ["do", "make", "take", "go"], correct: 2, explanation: "【搭配詞】「淋浴」固定搭配為 take a shower。" },
+            { question: "We need to _____ sure that all the doors are locked before leaving.", options: ["do", "make", "take", "keep"], correct: 1, explanation: "【搭配詞】「確保」固定搭配為 make sure。" },
+            { question: "The manager wants to _____ a meeting with the sales team this afternoon.", options: ["do", "make", "have", "take"], correct: 2, explanation: "【搭配詞】「開會」通常搭配 have a meeting 或是 hold a meeting。" },
+            { question: "If you _____ a mistake in the report, please correct it immediately.", options: ["do", "make", "take", "get"], correct: 1, explanation: "【搭配詞】「犯錯」固定搭配為 make a mistake。" },
+            { question: "We must _____ action now to prevent further damage to the environment.", options: ["make", "do", "take", "give"], correct: 2, explanation: "【搭配詞】「採取行動」固定搭配為 take action。" },
+            { question: "She always tries to _____ her best when faced with a difficult challenge.", options: ["make", "do", "take", "try"], correct: 1, explanation: "【搭配詞】「盡全力」固定搭配為 do one's best。" },
+            { question: "Could you _____ a picture of us standing in front of the monument?", options: ["make", "do", "take", "catch"], correct: 2, explanation: "【搭配詞】「拍照」固定搭配為 take a picture。" },
+
+            // 動詞/形容詞 + 介係詞 (Verb/Adj + Prepositions) - 16~35
+            { question: "Are you interested _____ joining our newly formed marketing team?", options: ["on", "in", "about", "with"], correct: 1, explanation: "【介係詞搭配】「對...感興趣」為 be interested in。" },
+            { question: "The new software developer will be _____ for maintaining our company website.", options: ["careful", "important", "interested", "responsible"], correct: 3, explanation: "【介係詞搭配】「負責...」為 be responsible for。" },
+            { question: "The marketing manager is looking forward to _____ the new product launch plan tomorrow.", options: ["discuss", "discussing", "discussion", "discussed"], correct: 1, explanation: "【慣用語】look forward to 的 to 是介係詞，後須接 V-ing。" },
+            { question: "The success of the project will depend entirely _____ the funding we receive.", options: ["in", "on", "at", "to"], correct: 1, explanation: "【介係詞搭配】「取決於、依賴」為 depend on。" },
+            { question: "I would like to apologize _____ the delay in delivering your order.", options: ["for", "about", "to", "with"], correct: 0, explanation: "【介係詞搭配】「為某事道歉」為 apologize for something。" },
+            { question: "This brief case belongs _____ the man who just walked out of the room.", options: ["with", "for", "in", "to"], correct: 3, explanation: "【介係詞搭配】「屬於」為 belong to。" },
+            { question: "She is very proud _____ her son's academic achievements.", options: ["in", "about", "of", "for"], correct: 2, explanation: "【介係詞搭配】「對...感到驕傲」為 be proud of。" },
+            { question: "The new design is very similar _____ the one we proposed last year.", options: ["with", "to", "as", "like"], correct: 1, explanation: "【介係詞搭配】「與...相似」為 be similar to。" },
+            { question: "He is exceptionally good _____ solving complex mathematical problems.", options: ["in", "on", "at", "with"], correct: 2, explanation: "【介係詞搭配】「擅長於...」為 be good at。" },
+            { question: "Please don't worry _____ the exam; you have studied very hard.", options: ["for", "about", "on", "with"], correct: 1, explanation: "【介係詞搭配】「擔心...」為 worry about。" },
+            { question: "They complained to the manager _____ the poor service in the restaurant.", options: ["for", "about", "on", "with"], correct: 1, explanation: "【介係詞搭配】「抱怨某事」為 complain about。" },
+            { question: "We need to focus _____ improving our customer service this quarter.", options: ["in", "on", "at", "to"], correct: 1, explanation: "【介係詞搭配】「專注於」為 focus on。" },
+            { question: "The hotel will _____ all guests with a complimentary breakfast.", options: ["offer", "give", "supply", "provide"], correct: 3, explanation: "【介係詞搭配】「提供某人某物」句型為 provide someone WITH something。" },
+            { question: "To _____ for the position, please send your updated resume.", options: ["ask", "look", "call", "apply"], correct: 3, explanation: "【介係詞搭配】「申請(職位)」為 apply for。" },
+            { question: "She spends a lot of money _____ clothes and accessories.", options: ["in", "on", "at", "for"], correct: 1, explanation: "【介係詞搭配】「花費(金錢/時間)在...上」為 spend ... on。" },
+            { question: "The train arrived _____ the station ten minutes late.", options: ["in", "on", "at", "to"], correct: 2, explanation: "【介係詞搭配】到達「小地點」(如車站、機場) 用 arrive at。" },
+            { question: "We arrived _____ Paris early in the morning.", options: ["in", "on", "at", "to"], correct: 0, explanation: "【介係詞搭配】到達「大地點」(如城市、國家) 用 arrive in。" },
+            { question: "He finally succeeded _____ passing his driving test.", options: ["to", "in", "on", "at"], correct: 1, explanation: "【介係詞搭配】「成功做到...」為 succeed in + V-ing。" },
+            { question: "Are you familiar _____ this type of computer software?", options: ["to", "with", "about", "for"], correct: 1, explanation: "【介係詞搭配】「對...熟悉」為 be familiar with。" },
+            { question: "The book consists _____ five chapters.", options: ["in", "of", "with", "from"], correct: 1, explanation: "【介係詞搭配】「由...組成」為 consist of。" },
+
+            // 時間與期限介係詞 (Time Prepositions) - 36~45
+            { question: "The weekly staff meeting will take place _____ Friday morning.", options: ["in", "at", "on", "by"], correct: 2, explanation: "【時間介係詞】特定日期/星期，使用 on (on Friday)。" },
+            { question: "Please ensure reports are submitted to the manager _____ Friday at 5 PM.", options: ["since", "until", "by", "on"], correct: 2, explanation: "【時間介係詞】「在...期限之前」用 by。" },
+            { question: "All applicants must submit their forms _____ the end of this month.", options: ["in", "on", "by", "until"], correct: 2, explanation: "【時間介係詞】「在...期限之前」用 by。" },
+            { question: "Please make sure to arrive at the airport at least two hours _____ advance.", options: ["on", "by", "in", "before"], correct: 2, explanation: "【介係詞片語】「事先、提前」為 in advance。" },
+            { question: "I haven't seen him _____ he graduated from university.", options: ["for", "since", "from", "in"], correct: 1, explanation: "【時間介係詞】自從過去某個明確時間點，用 since。" },
+            { question: "She has been working in this company _____ five years.", options: ["for", "since", "during", "in"], correct: 0, explanation: "【時間介係詞】持續一段時間長度，用 for (for 5 years)。" },
+            { question: "Please keep your phones turned off _____ the presentation.", options: ["for", "while", "during", "in"], correct: 2, explanation: "【時間介係詞】在某個事件/期間之內，用 during + 名詞。" },
+            { question: "The meeting starts exactly _____ 9:00 AM.", options: ["in", "on", "at", "by"], correct: 2, explanation: "【時間介係詞】精確的時鐘時刻，用 at。" },
+            { question: "My birthday is _____ August.", options: ["in", "on", "at", "by"], correct: 0, explanation: "【時間介係詞】單純指月份或年份，用 in (in August)。" },
+            { question: "If we hurry, we can get to the theater _____ time for the movie.", options: ["on", "in", "at", "by"], correct: 1, explanation: "【時間介係詞】in time 指「及時」；on time 指「準時」。看電影通常指及時趕上。" },
+
+            // 連接詞與轉折詞 (Conjunctions) - 46~60
+            { question: "We will not be able to start the meeting _____ the director arrives.", options: ["unless", "until", "by", "when"], correct: 1, explanation: "【連接詞】「直到...為止」用 until。動作持續到主管抵達。" },
+            { question: "We won't be able to finish the project on time _____ we hire more staff.", options: ["if", "because", "when", "unless"], correct: 3, explanation: "【連接詞】語意為「除非 (unless) 我們雇用更多員工，否則無法完成」。" },
+            { question: "_____ the high cost, the company decided to invest in the new technology.", options: ["Although", "Despite", "Because", "However"], correct: 1, explanation: "【轉折詞】Despite（儘管）後面接名詞 (the high cost)。Although 須接子句。" },
+            { question: "The weather forecast said it would be terrible; _____, they decided to go hiking.", options: ["although", "because", "therefore", "however"], correct: 3, explanation: "【轉折詞】However（然而）為副詞，置於分號或句號後。" },
+            { question: "_____ she was very tired, she finished the report before going to bed.", options: ["Despite", "In spite of", "Although", "However"], correct: 2, explanation: "【轉折詞】Although（雖然）後面接完整子句 (she was tired)。" },
+            { question: "I will call you _____ I arrive at the hotel.", options: ["until", "as soon as", "unless", "while"], correct: 1, explanation: "【連接詞】「一...就...」為 as soon as。表抵達後立刻打電話。" },
+            { question: "Please take an umbrella with you _____ it rains later.", options: ["in case", "if", "unless", "because"], correct: 0, explanation: "【連接詞】in case 表「以防萬一」。" },
+            { question: "He didn't study for the exam, _____ he failed it.", options: ["because", "therefore", "however", "although"], correct: 1, explanation: "【轉折詞】therefore（因此）表示因果關係的結果。" },
+            { question: "You can borrow my car _____ you drive carefully.", options: ["as long as", "unless", "even if", "although"], correct: 0, explanation: "【連接詞】as long as 表「只要...（條件）」。" },
+            { question: "_____ it was raining heavily, the football match was not canceled.", options: ["Because", "Even though", "Despite", "However"], correct: 1, explanation: "【連接詞】Even though（即使/雖然）接完整子句。" },
+            { question: "We decided to stay at home _____ of the bad weather.", options: ["because", "despite", "instead", "although"], correct: 0, explanation: "【連接詞】because of + 名詞 (因為...)。不能單獨用 because。" },
+            { question: "She was reading a book _____ her brother was playing video games.", options: ["during", "while", "until", "because"], correct: 1, explanation: "【連接詞】while（當...時候）連接兩個同時進行的動作/子句。" },
+            { question: "I don't know _____ or not he will attend the meeting.", options: ["if", "whether", "unless", "when"], correct: 1, explanation: "【連接詞】whether... or not 表「是否」。" },
+            { question: "They lost the game; _____, they played very well.", options: ["moreover", "nevertheless", "therefore", "because"], correct: 1, explanation: "【轉折詞】nevertheless（然而/不過），語意同 however。" },
+            { question: "_____ having a headache, he still went to work.", options: ["Although", "Because", "Despite", "While"], correct: 2, explanation: "【轉折詞】Despite 後面可接動名詞 V-ing (having)。" },
+
+            // 關係代名詞 (Relative Pronouns) - 61~70
+            { question: "The main conference room, _____ we held the annual meeting last year, is being renovated.", options: ["which", "when", "that", "where"], correct: 3, explanation: "【關係副詞】引導地方子句，指「在『那裡』」，用 where。" },
+            { question: "The office building _____ I used to work has been torn down.", options: ["which", "where", "that", "who"], correct: 1, explanation: "【關係副詞】指「在『那裡』工作」，用 where。" },
+            { question: "The laptop _____ I bought last week is already broken.", options: ["who", "whose", "where", "which"], correct: 3, explanation: "【關係代名詞】代替無生命事物，用 which。" },
+            { question: "Please send the documents to the manager _____ office is on the second floor.", options: ["who", "whom", "whose", "which"], correct: 2, explanation: "【關係代名詞】表達「...的辦公室 (所屬關係)」，用 whose。" },
+            { question: "The person to _____ I sent the email has not replied yet.", options: ["who", "whom", "whose", "which"], correct: 1, explanation: "【關係代名詞】介係詞 (to) 後面代替人，必須用受格 whom。" },
+            { question: "This is the restaurant _____ they serve the best pizza in town.", options: ["which", "where", "that", "when"], correct: 1, explanation: "【關係副詞】指「在『那家餐廳』提供」，用 where。" },
+            { question: "I can't find the keys _____ I left on the table.", options: ["who", "whose", "which", "where"], correct: 2, explanation: "【關係代名詞】代替無生命事物 (keys)，用 which (或 that)。" },
+            { question: "Do you remember the day _____ we first met?", options: ["which", "where", "when", "why"], correct: 2, explanation: "【關係副詞】引導時間 (the day)，用 when。" },
+            { question: "The woman _____ is talking to the boss is our new client.", options: ["whom", "whose", "who", "which"], correct: 2, explanation: "【關係代名詞】代替人並當作主詞，用 who。" },
+            { question: "That is the reason _____ I didn't call you yesterday.", options: ["which", "what", "where", "why"], correct: 3, explanation: "【關係副詞】the reason 固定搭配 why。" },
+
+            // 文法與時態 (Grammar & Tenses) - 71~85
+            { question: "If it rains tomorrow, we _____ the outdoor event.", options: ["cancel", "would cancel", "canceled", "will cancel"], correct: 3, explanation: "【條件句】第一條件句：If + 現在式, 句子主要子句用未來式 (will)。" },
+            { question: "By the time we arrived at the station, the train _____ already left.", options: ["has", "had", "was", "is"], correct: 1, explanation: "【時態】火車離開發生在到達之前，「過去的過去」用過去完成式 (had p.p.)。" },
+            { question: "I _____ in this city since I was a child.", options: ["live", "am living", "have lived", "lived"], correct: 2, explanation: "【時態】搭配 since 表從過去持續到現在，用現在完成式 (have p.p.)。" },
+            { question: "He _____ his keys, so he can't open the door now.", options: ["loses", "lost", "has lost", "had lost"], correct: 2, explanation: "【時態】過去的動作對「現在」造成影響 (現在打不開)，用現在完成式。" },
+            { question: "What _____ you doing at 8 PM last night?", options: ["are", "did", "were", "had"], correct: 2, explanation: "【時態】詢問過去某個「特定時刻」正在進行的動作，用過去進行式 (were doing)。" },
+            { question: "I think it _____ rain later this afternoon. Look at those dark clouds!", options: ["will", "is going to", "would", "must"], correct: 1, explanation: "【時態】有客觀證據 (dark clouds) 預測未來，常用 is going to。" },
+            { question: "If I _____ you, I would accept the job offer.", options: ["am", "was", "were", "be"], correct: 2, explanation: "【條件句】第二條件句(與現在事實相反)，be 動詞一律用 were。" },
+            { question: "The room is cleaned by the maid every day. (This sentence is in _____ voice)", options: ["Active", "Passive", "Future", "Past"], correct: 1, explanation: "【語態】be 動詞 + p.p. 為被動語態 (Passive voice)。" },
+            { question: "I enjoy _____ to music while I am studying.", options: ["listen", "to listen", "listening", "listened"], correct: 2, explanation: "【動名詞】enjoy 後面固定接動名詞 V-ing。" },
+            { question: "They decided _____ the old house instead of selling it.", options: ["renovate", "to renovate", "renovating", "renovated"], correct: 1, explanation: "【不定詞】decide 後面固定接不定詞 to V。" },
+            { question: "Do you mind _____ the window? It's a bit cold in here.", options: ["close", "to close", "closing", "closed"], correct: 2, explanation: "【動名詞】mind (介意) 後面固定接動名詞 V-ing。" },
+            { question: "I avoid _____ in rush hour traffic if possible.", options: ["drive", "to drive", "driving", "driven"], correct: 2, explanation: "【動名詞】avoid (避免) 後面固定接動名詞 V-ing。" },
+            { question: "She promised _____ me with my homework.", options: ["help", "to help", "helping", "helped"], correct: 1, explanation: "【不定詞】promise (答應) 後面固定接不定詞 to V。" },
+            { question: "He suggested _____ out for dinner tonight.", options: ["go", "to go", "going", "went"], correct: 2, explanation: "【動名詞】suggest (建議) 後面固定接動名詞 V-ing。" },
+            { question: "I want _____ the manager about my complaint.", options: ["see", "to see", "seeing", "saw"], correct: 1, explanation: "【不定詞】want 後面固定接不定詞 to V。" },
+
+            // 字彙、不可數名詞與數量詞 (Vocabulary & Quantifiers) - 86~100
+            { question: "Can you give me some _____ on how to improve my presentation skills?", options: ["advise", "advises", "advices", "advice"], correct: 3, explanation: "【不可數名詞】advice (建議) 不可數，沒有複數形。advise 是動詞。" },
+            { question: "Could you please give me some _____ regarding the upcoming business trip?", options: ["informations", "inform", "informative", "information"], correct: 3, explanation: "【不可數名詞】information (資訊) 不可數，絕對不可以加 s。" },
+            { question: "We don't have _____ time left before the presentation starts.", options: ["many", "a lot", "much", "some"], correct: 2, explanation: "【數量詞】time 在此為不可數名詞，否定句中常用 much 修飾。" },
+            { question: "There is still _____ milk left in the fridge.", options: ["a few", "little", "few", "a little"], correct: 3, explanation: "【數量詞】milk 不可數，肯定語意「還有一點」用 a little。" },
+            { question: "I am _____ aware of the problems this delay might cause.", options: ["fully", "strongly", "highly", "deeply"], correct: 0, explanation: "【副詞搭配】「完全了解」為 fully aware。" },
+            { question: "Many employees are not _____ satisfied with the new policy.", options: ["fully", "strongly", "highly", "deeply"], correct: 0, explanation: "【副詞搭配】「完全滿意」為 fully satisfied。" },
+            { question: "Before you sign the contract, you should read all the terms _____.", options: ["careful", "carefully", "carefulness", "caring"], correct: 1, explanation: "【詞性】修飾動詞 read 必須使用副詞 carefully。" },
+            { question: "I need to buy _____ furniture for my new apartment.", options: ["some", "a few", "many", "these"], correct: 0, explanation: "【不可數名詞】furniture (傢俱) 為不可數名詞，可用 some 修飾，不可用 a few/many。" },
+            { question: "How _____ luggage are you taking on the trip?", options: ["many", "much", "few", "a lot"], correct: 1, explanation: "【數量詞】luggage (行李) 為不可數名詞，提問用 How much。" },
+            { question: "There are _____ people waiting outside the store.", options: ["much", "a lot of", "a little", "any"], correct: 1, explanation: "【數量詞】people 是可數名詞複數，可用 a lot of 或 many 修飾。" },
+            { question: "I have very _____ knowledge about car engines.", options: ["few", "little", "small", "short"], correct: 1, explanation: "【數量詞】knowledge 是不可數名詞，表示「幾乎沒有」用 little。" },
+            { question: "Can I offer you a _____ of advice?", options: ["piece", "slice", "block", "sheet"], correct: 0, explanation: "【量詞】不可數名詞 advice 可用 a piece of advice (一個建議) 來計量。" },
+            { question: "The company offers a very competitive _____ to its employees.", options: ["salary", "money", "cash", "coins"], correct: 0, explanation: "【字彙】工作獲得的薪水/月薪稱為 salary。" },
+            { question: "He doesn't have enough _____ to buy a new car.", options: ["wealth", "money", "currencies", "incomes"], correct: 1, explanation: "【字彙】普遍指稱金錢用 money (不可數)。" },
+            { question: "The flight was canceled due to severe weather _____.", options: ["situations", "conditions", "environments", "climates"], correct: 1, explanation: "【字彙搭配】「天氣狀況」常搭配 weather conditions。" }
+        ];
+
+        let currentQuizData = []; 
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let hasAnswered = false;
+        const QUESTIONS_PER_QUIZ = 10; 
+
+        const qNumEl = document.getElementById('q-num');
+        const questionTextEl = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const explanationContainer = document.getElementById('explanation-container');
+        const explanationTextEl = document.getElementById('explanation-text');
+        const nextBtn = document.getElementById('next-btn');
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progress-bar');
+        const scoreDisplay = document.getElementById('score-display');
+        const quizResult = document.getElementById('quiz-result');
+        const questionCard = document.getElementById('question-card');
+
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function initQuiz() {
+            // 從 100 題庫中隨機抽出 10 題
+            const shuffledMaster = shuffleArray([...masterQuizData]);
+            currentQuizData = shuffledMaster.slice(0, QUESTIONS_PER_QUIZ);
+            
+            currentQuestionIndex = 0;
+            score = 0;
+            updateScoreDisplay();
+            
+            questionCard.classList.remove('hidden');
+            quizResult.classList.add('hidden');
+            
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            hasAnswered = false;
+            explanationContainer.classList.add('hidden');
+            
+            const currentQ = currentQuizData[currentQuestionIndex];
+            qNumEl.textContent = currentQuestionIndex + 1;
+            
+            const formattedQuestion = currentQ.question.replace('_____', '<span class="inline-block w-16 border-b-2 border-gray-400 mx-1"></span>');
+            questionTextEl.innerHTML = formattedQuestion;
+
+            progressText.textContent = `${currentQuestionIndex + 1} / ${currentQuizData.length}`;
+            progressBar.style.width = `${((currentQuestionIndex) / currentQuizData.length) * 100}%`;
+
+            optionsContainer.innerHTML = '';
+            currentQ.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full text-left bg-white border-2 border-gray-200 p-4 rounded-xl font-medium text-gray-700 active-scale shadow-sm hover:border-blue-300';
+                btn.innerHTML = `<span class="inline-block w-6 text-gray-400 mr-2">${String.fromCharCode(65 + index)}.</span> ${opt}`;
+                btn.onclick = () => selectOption(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function selectOption(selectedIndex, btnElement) {
+            if (hasAnswered) return; 
+            hasAnswered = true;
+
+            const currentQ = currentQuizData[currentQuestionIndex];
+            const allBtns = optionsContainer.children;
+
+            if (selectedIndex === currentQ.correct) {
+                btnElement.classList.add('correct');
+                btnElement.innerHTML += '<i class="fa-solid fa-circle-check float-right text-xl mt-0.5"></i>';
+                score++;
+                updateScoreDisplay();
+            } else {
+                btnElement.classList.add('incorrect');
+                btnElement.innerHTML += '<i class="fa-solid fa-circle-xmark float-right text-xl mt-0.5"></i>';
+                allBtns[currentQ.correct].classList.add('correct');
+                allBtns[currentQ.correct].classList.remove('border-gray-200');
+            }
+
+            Array.from(allBtns).forEach(b => {
+                b.disabled = true;
+                b.classList.remove('active-scale', 'hover:border-blue-300');
+                if (!b.classList.contains('correct') && !b.classList.contains('incorrect')) {
+                    b.classList.add('opacity-50');
+                }
+            });
+
+            const blankSpan = questionTextEl.querySelector('span');
+            if (blankSpan) {
+                blankSpan.textContent = currentQ.options[currentQ.correct];
+                blankSpan.className = "inline-block font-bold text-blue-600 px-1 border-b-2 border-blue-600 mx-1";
+            }
+
+            // 將【標籤】高亮顯示
+            let formattedExplanation = currentQ.explanation.replace(/【(.*?)】/g, '<strong class="text-blue-700 bg-blue-100 px-1 rounded mr-1">【$1】</strong> ');
+            explanationTextEl.innerHTML = formattedExplanation;
+            explanationContainer.classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('view-quiz').scrollTop = document.getElementById('view-quiz').scrollHeight;
+            }, 100);
+            
+            if (currentQuestionIndex === currentQuizData.length - 1) {
+                nextBtn.innerHTML = '查看結果 <i class="fa-solid fa-flag-checkered ml-1"></i>';
+            } else {
+                nextBtn.innerHTML = '下一題 <i class="fa-solid fa-arrow-right ml-1"></i>';
+            }
+        }
+
+        nextBtn.addEventListener('click', () => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuizData.length) {
+                loadQuestion();
+                document.getElementById('view-quiz').scrollTop = 0;
+            } else {
+                showResults();
+            }
+        });
+
+        function showResults() {
+            questionCard.classList.add('hidden');
+            quizResult.classList.remove('hidden');
+            progressBar.style.width = '100%';
+            
+            const finalPercentage = Math.round((score / currentQuizData.length) * 100);
+            const resultDesc = document.getElementById('result-desc');
+            const resultIcon = document.getElementById('result-icon');
+            
+            if (finalPercentage >= 80) {
+                resultIcon.className = "inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-500 mb-4";
+                resultIcon.innerHTML = '<i class="fa-solid fa-trophy text-3xl"></i>';
+                resultDesc.innerHTML = `太棒了！本次答對率 <strong>${finalPercentage}%</strong><br>你的 B1 程度相當穩固！點擊按鈕挑戰下一批隨機題型。`;
+            } else if (finalPercentage >= 60) {
+                resultIcon.className = "inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 text-yellow-500 mb-4";
+                resultIcon.innerHTML = '<i class="fa-solid fa-star text-3xl"></i>';
+                resultDesc.innerHTML = `不錯喔！本次答對率 <strong>${finalPercentage}%</strong><br>再多刷幾次題並詳讀解析，就能穩拿 B1。`;
+            } else {
+                resultIcon.className = "inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4";
+                resultIcon.innerHTML = '<i class="fa-solid fa-dumbbell text-3xl"></i>';
+                resultDesc.innerHTML = `繼續加油！本次答對率 <strong>${finalPercentage}%</strong><br>請務必詳讀每一題的解析與學習指南。`;
+            }
+        }
+
+        function restartQuiz() {
+            initQuiz();
+        }
+
+        function updateScoreDisplay() {
+            const totalAnswered = currentQuestionIndex + (hasAnswered ? 1 : 0);
+            if (totalAnswered === 0 && !hasAnswered) {
+                scoreDisplay.textContent = `0%`;
+                return;
+            }
+            const percentage = Math.round((score / totalAnswered) * 100);
+            scoreDisplay.textContent = `${percentage}%`;
+        }
+
+        function switchTab(tab) {
+            const viewQuiz = document.getElementById('view-quiz');
+            const viewGuide = document.getElementById('view-guide');
+            const navQuiz = document.getElementById('nav-quiz');
+            const navGuide = document.getElementById('nav-guide');
+
+            if (tab === 'quiz') {
+                viewQuiz.classList.remove('view-hidden');
+                viewGuide.classList.add('view-hidden');
+                
+                navQuiz.classList.remove('text-gray-400', 'hover:text-gray-600');
+                navQuiz.classList.add('text-blue-600');
+                navGuide.classList.remove('text-blue-600');
+                navGuide.classList.add('text-gray-400', 'hover:text-gray-600');
+            } else if (tab === 'guide') {
+                viewGuide.classList.remove('view-hidden');
+                viewQuiz.classList.add('view-hidden');
+                
+                navGuide.classList.remove('text-gray-400', 'hover:text-gray-600');
+                navGuide.classList.add('text-blue-600');
+                navQuiz.classList.remove('text-blue-600');
+                navQuiz.classList.add('text-gray-400', 'hover:text-gray-600');
+            }
+        }
+
+        window.onload = () => {
+            initQuiz();
+        };
+    </script>
+</body>
+</html>
