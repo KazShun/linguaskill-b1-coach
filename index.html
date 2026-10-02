@@ -22,9 +22,10 @@
         body::-webkit-scrollbar {
             display: none;
         }
-        /* 避免 iOS Safari 下方導覽列遮擋內容 */
+        /* 避免 iOS Safari 下方導覽列遮擋內容 (加入 env(safe-area-inset-bottom) 的保護) */
         .content-area {
-            padding-bottom: 80px; 
+            /* 預設給予足夠的 padding，並加入 Safari 的底部安全距離 */
+            padding-bottom: calc(100px + env(safe-area-inset-bottom)); 
         }
         /* 點擊時的視覺回饋 */
         .active-scale:active {
@@ -159,8 +160,9 @@
         </div>
     </main>
 
-    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-20 pb-safe">
-        <div class="flex justify-around items-center h-16 px-2" style="padding-bottom: env(safe-area-inset-bottom);">
+    <!-- 底部導覽列：加入 pb-safe (Tailwind 自訂類別的替代方案) 與 env() 設定 -->
+    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full z-20" style="padding-bottom: env(safe-area-inset-bottom);">
+        <div class="flex justify-around items-center h-16 px-2">
             <button id="nav-quiz" onclick="switchTab('quiz')" class="flex flex-col items-center justify-center w-full h-full text-blue-600 transition-colors">
                 <i class="fa-solid fa-pen-to-square text-xl mb-1"></i>
                 <span class="text-[10px] font-semibold">測驗練習</span>
